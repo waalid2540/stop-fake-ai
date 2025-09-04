@@ -1,10 +1,56 @@
-import { requireAuth } from '@/lib/auth'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import DashboardTabs from '@/components/DashboardTabs'
 import Link from 'next/link'
 import { Shield, User, CreditCard, LogOut } from 'lucide-react'
 
-export default async function DashboardPage() {
-  const user = await requireAuth()
+export default function DashboardPage() {
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Check if user is logged in
+    const token = localStorage.getItem('token')
+    const userData = localStorage.getItem('user')
+    
+    if (!token || !userData) {
+      router.push('/login')
+      return
+    }
+
+    try {
+      setUser(JSON.parse(userData))
+    } catch (error) {
+      router.push('/login')
+      return
+    } finally {
+      setLoading(false)
+    }
+  }, [router])
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    router.push('/')
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null // Will redirect to login
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -30,15 +76,13 @@ export default async function DashboardPage() {
                 <User className="h-4 w-4" />
                 <span className="text-sm">{user.email}</span>
               </div>
-              <form action="/api/auth/logout" method="POST">
-                <button 
-                  type="submit"
-                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Logout
-                </button>
-              </form>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
             </div>
           </div>
         </div>

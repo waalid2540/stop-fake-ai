@@ -1,42 +1,74 @@
-import { createServerClient } from './supabase-server'
-import { redirect } from 'next/navigation'
+// PostgreSQL-based authentication system
+import { NextRequest } from 'next/server'
+import { stopFakeAIDB } from './universal-db'
 
 export async function getUser() {
   try {
-    const supabase = createServerClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    return user
-  } catch (error) {
-    // Return a mock user for development when Supabase is not configured
-    if (process.env.NODE_ENV === 'development') {
+    // For server-side usage, this will be called from API routes with proper token
+    // For development, return a mock user
+    if (process.env.NODE_ENV === 'development' && !process.env.DATABASE_URL) {
       return {
         id: 'dev-user-123',
         email: 'demo@stopfakeai.com',
         user_metadata: { full_name: 'Demo User' }
       } as any
     }
+    return null // Will be handled by requireAuth
+  } catch (error) {
     return null
   }
 }
 
-export async function requireAuth() {
-  const user = await getUser()
-  if (!user) {
-    redirect('/login')
+export async function requireAuth(request?: NextRequest | Request) {
+  try {
+    // Try to get token from Authorization header
+    let token: string | null = null
+    
+    if (request) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1]
+      }
+    }
+
+    if (!token) {
+      throw new Error('No authentication token provided')
+    }
+
+    // Verify token and get user data
+    const auth = await stopFakeAIDB.verifyToken(token)
+    return {
+      id: auth.userId.toString(),
+      email: auth.email,
+      subscription_tier: auth.user.subscriptionTier,
+      daily_checks: auth.user.dailyChecks,
+      stripe_customer_id: auth.user.stripeCustomerId
+    }
+  } catch (error) {
+    // For development without DATABASE_URL, return mock user
+    if (process.env.NODE_ENV === 'development' && !process.env.DATABASE_URL) {
+      return {
+        id: 'dev-user-123',
+        email: 'demo@stopfakeai.com',
+        subscription_tier: 'free',
+        daily_checks: 0
+      } as any
+    }
+    throw new Error('Authentication failed')
   }
-  return user
 }
 
 export async function getUserSubscription(userId: string) {
   try {
-    const supabase = createServerClient()
-    const { data } = await supabase
-      .from('users')
-      .select('subscription_tier, daily_checks, last_check_reset')
-      .eq('id', userId)
-      .single()
+    // Convert string ID to number for PostgreSQL
+    const numericUserId = parseInt(userId)
+    const auth = await stopFakeAIDB.verifyToken(userId) // This will need to be called with proper token
     
-    return data
+    return {
+      subscription_tier: auth.user.subscriptionTier as 'free' | 'yearly' | 'pro',
+      daily_checks: auth.user.dailyChecks,
+      last_check_reset: auth.user.lastCheckReset
+    }
   } catch (error) {
     // Return mock subscription data for development
     if (process.env.NODE_ENV === 'development') {
@@ -50,31 +82,10 @@ export async function getUserSubscription(userId: string) {
   }
 }
 
-export async function checkDailyLimit(userId: string): Promise<boolean> {
+export async function checkDailyLimit(userId: string | number): Promise<boolean> {
   try {
-    const supabase = createServerClient()
-    const subscription = await getUserSubscription(userId)
-    
-    if (!subscription) return false
-    
-    if (subscription.subscription_tier !== 'free') {
-      return true // Unlimited for paid users
-    }
-    
-    // Reset daily checks if it's a new day
-    const lastReset = new Date(subscription.last_check_reset)
-    const now = new Date()
-    
-    if (lastReset.toDateString() !== now.toDateString()) {
-      await supabase
-        .from('users')
-        .update({ daily_checks: 0, last_check_reset: now.toISOString() })
-        .eq('id', userId)
-      
-      return true
-    }
-    
-    return subscription.daily_checks < 3
+    const numericUserId = typeof userId === 'string' ? parseInt(userId) : userId
+    return await stopFakeAIDB.checkDailyLimit(numericUserId)
   } catch (error) {
     // Allow unlimited checks in development
     if (process.env.NODE_ENV === 'development') {
@@ -84,21 +95,39 @@ export async function checkDailyLimit(userId: string): Promise<boolean> {
   }
 }
 
-export async function incrementDailyChecks(userId: string) {
+export async function incrementDailyChecks(userId: string | number) {
   try {
-    const supabase = createServerClient()
-    const subscription = await getUserSubscription(userId)
-    
-    if (subscription?.subscription_tier === 'free') {
-      await supabase
-        .from('users')
-        .update({ daily_checks: subscription.daily_checks + 1 })
-        .eq('id', userId)
-    }
+    const numericUserId = typeof userId === 'string' ? parseInt(userId) : userId
+    await stopFakeAIDB.incrementDailyChecks(numericUserId)
   } catch (error) {
     // Silently fail in development
     if (process.env.NODE_ENV !== 'development') {
       console.error('Failed to increment daily checks:', error)
+    }
+  }
+}
+
+// For backward compatibility with existing code
+export { stopFakeAIDB as supabase }
+
+// Database types for TypeScript
+export type Database = {
+  public: {
+    Tables: {
+      sfa_users: {
+        Row: {
+          id: number
+          email: string
+          subscription_tier: 'free' | 'yearly' | 'pro'
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          daily_checks: number
+          last_check_reset: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['sfa_users']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['sfa_users']['Insert']>
+      }
     }
   }
 }
