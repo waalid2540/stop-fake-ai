@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, AlertCircle, CheckCircle, XCircle, Image } from 'lucide-react'
+import Image from 'next/image'
+import { Upload, AlertCircle, CheckCircle, XCircle, Image as ImageIcon } from 'lucide-react'
 
 export default function ImageDetection() {
   const [file, setFile] = useState<File | null>(null)
@@ -78,14 +79,16 @@ export default function ImageDetection() {
               {preview ? (
                 <div className="space-y-4">
                   {file?.type.startsWith('image/') ? (
-                    <img
+                    <Image
                       src={preview}
                       alt="Preview"
-                      className="max-h-64 mx-auto rounded-lg"
+                      width={256}
+                      height={256}
+                      className="max-h-64 mx-auto rounded-lg object-contain"
                     />
                   ) : (
                     <div className="bg-gray-100 rounded-lg p-8">
-                      <Image className="h-16 w-16 text-gray-400 mx-auto mb-2" />
+                      <ImageIcon className="h-16 w-16 text-gray-400 mx-auto mb-2" />
                       <p className="text-gray-600">Video: {file?.name}</p>
                     </div>
                   )}

@@ -9,6 +9,12 @@ export default function TextDetection() {
   const [result, setResult] = useState<{
     likelyAI: boolean
     score: number
+    language?: {
+      detected: string
+      code: string
+      accuracy: 'high' | 'medium' | 'low'
+      warning?: string
+    }
   } | null>(null)
   const [error, setError] = useState('')
 
@@ -58,12 +64,12 @@ export default function TextDetection() {
             disabled={loading}
           />
           <p className="text-sm text-gray-500 mt-1">
-            Minimum 100 characters for accurate detection
+            Minimum 50 characters (varies by language). Supports 12+ languages including English, Spanish, French, German, Chinese, Japanese, and more.
           </p>
         </div>
         <button
           type="submit"
-          disabled={loading || text.length < 100}
+          disabled={loading || text.length < 50}
           className="w-full bg-primary-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-primary-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Analyzing...' : 'Detect AI Content'}
@@ -102,6 +108,32 @@ export default function TextDetection() {
               )}
             </div>
           </div>
+
+          {/* Language Information */}
+          {result.language && (
+            <div className="mb-4 bg-white rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-600 font-medium">Detected Language</span>
+                <span className="text-lg font-semibold">{result.language.detected}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium">Detection Accuracy</span>
+                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                  result.language.accuracy === 'high' ? 'bg-green-100 text-green-800' :
+                  result.language.accuracy === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {result.language.accuracy.toUpperCase()}
+                </span>
+              </div>
+              {result.language.warning && (
+                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-yellow-800 text-sm">{result.language.warning}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="mt-4 bg-white rounded-lg p-4">
             <div className="flex justify-between items-center">
               <span className="text-gray-600 font-medium">Confidence Score</span>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, checkDailyLimit, incrementDailyChecks } from '@/lib/auth'
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit'
 import { apiClient, classifyAPIError } from '@/lib/api-client'
+import { detectLanguage, getLanguageAccuracyWarning, getMinimumTextLength } from '@/lib/language-utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,10 +39,29 @@ export async function POST(request: NextRequest) {
 
     const { text } = await request.json()
 
-    if (!text || text.length < 100) {
+    if (!text || text.length < 50) {
       return NextResponse.json(
-        { error: 'Text must be at least 100 characters' },
+        { error: 'Text must be at least 50 characters (minimum varies by language)' },
         { status: 400 }
+      )
+    }
+    
+    // Detect language and validate minimum length
+    const detectedLanguage = detectLanguage(text)
+    const minLength = getMinimumTextLength(detectedLanguage)
+    const accuracyWarning = getLanguageAccuracyWarning(detectedLanguage)
+    
+    if (text.length < minLength) {
+      return NextResponse.json(
+        { 
+          error: `Text must be at least ${minLength} characters for ${detectedLanguage.name} language detection`,
+          detectedLanguage: detectedLanguage.name,
+          minLength
+        },
+        { 
+          status: 400,
+          headers: rateLimitHeaders
+        }
       )
     }
 
@@ -56,6 +76,12 @@ export async function POST(request: NextRequest) {
         result = {
           likelyAI: data.documents[0].completely_generated_prob > 0.5,
           score: data.documents[0].completely_generated_prob,
+          language: {
+            detected: detectedLanguage.name,
+            code: detectedLanguage.code,
+            accuracy: detectedLanguage.accuracy,
+            warning: accuracyWarning
+          },
           details: {
             sentences: data.documents[0].sentences.length,
             averagePerplexity: data.documents[0].average_generated_prob,
@@ -84,6 +110,12 @@ export async function POST(request: NextRequest) {
         result = {
           likelyAI: simulatedScore > 0.5,
           score: simulatedScore,
+          language: {
+            detected: detectedLanguage.name,
+            code: detectedLanguage.code,
+            accuracy: detectedLanguage.accuracy,
+            warning: accuracyWarning
+          },
           details: {
             sentences: text.split('.').length - 1,
             averagePerplexity: simulatedScore * 100,
@@ -99,6 +131,12 @@ export async function POST(request: NextRequest) {
       result = {
         likelyAI: simulatedScore > 0.5,
         score: simulatedScore,
+        language: {
+          detected: detectedLanguage.name,
+          code: detectedLanguage.code,
+          accuracy: detectedLanguage.accuracy,
+          warning: accuracyWarning
+        },
         details: {
           sentences: text.split('.').length - 1,
           averagePerplexity: simulatedScore * 100,
