@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: stop-fake-ai
+    env: node
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_BASE_URL
+        value: https://stop-fake-ai.onrender.com
+    autoDeploy: true
