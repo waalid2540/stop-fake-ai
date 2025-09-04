@@ -5,8 +5,8 @@ import { headers } from 'next/headers'
 
 // TODO: Replace with your Supabase service role key (different from anon key)
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key',
   {
     auth: {
       persistSession: false,
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     event = stripe.webhooks.constructEvent(
       body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET || 'placeholder-webhook-secret'
     )
   } catch (err: any) {
     console.error('Webhook signature verification failed:', err.message)
