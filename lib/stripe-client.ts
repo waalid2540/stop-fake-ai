@@ -1,18 +1,23 @@
 import { getStripeJs } from './stripe'
 
 export async function createCheckoutSession(priceId: string) {
+  console.log('Creating checkout session with price ID:', priceId)
+  const token = localStorage.getItem('token')
+  console.log('Auth token exists:', !!token)
+  
   const response = await fetch('/api/stripe/checkout', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({ priceId }),
   })
 
   if (!response.ok) {
     const error = await response.json()
-    throw new Error(error.message || 'Failed to create checkout session')
+    console.error('Checkout error:', error)
+    throw new Error(error.error || error.message || 'Failed to create checkout session')
   }
 
   const { sessionId } = await response.json()

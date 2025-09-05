@@ -38,8 +38,8 @@ export async function requireAuth(request?: NextRequest | Request) {
     // Verify token and get user data
     const auth = await stopFakeAIDB.verifyToken(token)
     return {
-      id: auth.userId.toString(),
-      email: auth.email,
+      id: auth.user.id,
+      email: auth.user.email,
       subscription_tier: auth.user.subscriptionTier,
       daily_checks: auth.user.dailyChecks,
       stripe_customer_id: auth.user.stripeCustomerId
