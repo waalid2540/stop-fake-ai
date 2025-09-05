@@ -1,10 +1,11 @@
 import { getStripeJs } from './stripe'
 
 export async function createCheckoutSession(priceId: string) {
-  const response = await fetch('/api/create-checkout-session', {
+  const response = await fetch('/api/stripe/checkout', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
     },
     body: JSON.stringify({ priceId }),
   })

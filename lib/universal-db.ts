@@ -318,6 +318,27 @@ class UniversalDB {
     }
   }
 
+  async updateUserSubscription(userId: number, status: string, stripeSubscriptionId: string) {
+    const client = await this.pool.connect()
+    
+    try {
+      // Map Stripe status to subscription tier
+      let subscriptionTier = 'free'
+      if (status === 'active') {
+        subscriptionTier = 'yearly' // Default to yearly for active subscriptions
+      }
+
+      await client.query(
+        `UPDATE ${this.prefix}_users 
+         SET subscription_tier = $1, stripe_subscription_id = $2
+         WHERE id = $3`,
+        [subscriptionTier, stripeSubscriptionId, userId]
+      )
+    } finally {
+      client.release()
+    }
+  }
+
   async recordPayment(userId: number, stripePaymentId: string, amount: number, status: string) {
     const client = await this.pool.connect()
     
