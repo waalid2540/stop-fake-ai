@@ -10,6 +10,14 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null)
 
   const handleSubscribe = async (plan: 'yearly' | 'pro') => {
+    // Check if user is logged in
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('Please sign in to subscribe')
+      window.location.href = '/login'
+      return
+    }
+
     setLoading(plan)
     try {
       const priceId = plan === 'yearly' ? PLANS.yearly.stripePriceId : PLANS.pro.stripePriceId
