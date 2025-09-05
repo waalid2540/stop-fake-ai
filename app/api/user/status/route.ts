@@ -6,16 +6,11 @@ export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth(request)
     
-    // Get fresh user data from database
-    // We need to create a new connection since pool is private
-    const { Pool } = require('pg')
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-    })
-    const client = await pool.connect()
+    // Get fresh user data from database using connection pool
+    const { query } = require('@/lib/db-pool')
+    
     try {
-      const result = await client.query(
+      const result = await query(
         `SELECT subscription_tier, daily_checks, last_check_reset, stripe_subscription_id
          FROM sfa_users 
          WHERE id = $1`,
@@ -38,9 +33,8 @@ export async function GET(request: NextRequest) {
         has_active_subscription: userData.subscription_tier !== 'free',
         stripe_subscription_id: userData.stripe_subscription_id
       })
-    } finally {
-      client.release()
-      await pool.end()
+    } catch (error) {
+      throw error
     }
   } catch (error: any) {
     console.error('User status error:', error)
