@@ -237,7 +237,7 @@ export default function HomePage() {
             
             <div className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
               <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Image className="h-8 w-8 text-purple-600" alt="Deepfake Detection" />
+                <Image className="h-8 w-8 text-purple-600" />
               </div>
               <h3 className="text-2xl font-semibold mb-4 text-center">Deepfake Detection</h3>
               <ul className="space-y-3 text-gray-600 mb-6">
