@@ -10,6 +10,34 @@ export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('free')
+
+  const fetchUserStatus = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+      
+      const response = await fetch('/api/user/status', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setSubscriptionStatus(data.subscription_tier || 'free')
+        // Update local storage with latest user data
+        const userData = localStorage.getItem('user')
+        if (userData) {
+          const user = JSON.parse(userData)
+          user.subscriptionTier = data.subscription_tier
+          localStorage.setItem('user', JSON.stringify(user))
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch user status:', error)
+    }
+  }
 
   useEffect(() => {
     // Check if user is logged in
@@ -22,7 +50,16 @@ export default function DashboardPage() {
     }
 
     try {
-      setUser(JSON.parse(userData))
+      const parsedUser = JSON.parse(userData)
+      setUser(parsedUser)
+      setSubscriptionStatus(parsedUser.subscriptionTier || 'free')
+      
+      // Check for payment success
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('success') === 'true') {
+        // Fetch latest subscription status
+        fetchUserStatus()
+      }
     } catch (error) {
       router.push('/login')
       return
@@ -101,17 +138,30 @@ export default function DashboardPage() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-blue-900 font-medium">Daily Usage</p>
+              <p className="text-blue-900 font-medium">
+                {subscriptionStatus === 'free' ? 'Daily Usage' : 'Subscription Status'}
+              </p>
               <p className="text-sm text-blue-700 mt-1">
-                You have used 0 of 3 free checks today
+                {subscriptionStatus === 'free' 
+                  ? 'You have used 0 of 3 free checks today'
+                  : `✨ ${subscriptionStatus === 'yearly' ? 'Yearly' : 'Pro'} Plan - Unlimited Checks`}
               </p>
             </div>
-            <Link
-              href="/pricing"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
-            >
-              Get Unlimited Checks
-            </Link>
+            {subscriptionStatus === 'free' ? (
+              <Link
+                href="/pricing"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+              >
+                Get Unlimited Checks
+              </Link>
+            ) : (
+              <button
+                onClick={fetchUserStatus}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition"
+              >
+                Refresh Status
+              </button>
+            )}
           </div>
         </div>
 
