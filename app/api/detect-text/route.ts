@@ -67,8 +67,33 @@ export async function POST(request: NextRequest) {
 
     let result;
 
-    // Check if we have a real GPTZero API key
-    if (process.env.GPTZERO_API_KEY && process.env.GPTZERO_API_KEY !== 'placeholder-gptzero-key') {
+    // Import smart detection service
+    const { smartDetect } = await import('@/lib/ai-detection-service')
+    
+    // Use smart detection based on user tier
+    const userTier = user.subscription_tier || 'free'
+    const detection = await smartDetect(text, userTier as any)
+    
+    // Format result consistently
+    if (detection.method === 'pattern' || detection.method === 'cache') {
+      // Free/cached detection result
+      result = {
+        likelyAI: detection.isAI,
+        score: detection.confidence,
+        language: {
+          detected: detectedLanguage.name,
+          code: detectedLanguage.code,
+          accuracy: detectedLanguage.accuracy,
+          warning: accuracyWarning
+        },
+        details: {
+          ...detection.details,
+          method: detection.method,
+          costSaved: detection.method === 'cache' ? '$0.10' : '$0.08',
+          sentences: text.split('.').length - 1
+        }
+      }
+    } else if (process.env.GPTZERO_API_KEY && process.env.GPTZERO_API_KEY !== 'placeholder-gptzero-key' && detection.method === 'api') {
       try {
         // Real GPTZero API call using enhanced client
         const data = await apiClient.detectTextWithGPTZero(text, process.env.GPTZERO_API_KEY)
