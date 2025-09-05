@@ -32,7 +32,7 @@ export const PLANS = {
     checks: 'unlimited',
     period: 'year',
     features: ['Priority support', 'API access', 'Bulk detection'],
-    // Use NEXT_PUBLIC_ prefix to make it available to the client
-    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || 'price_placeholder_pro',
+    // Temporarily use yearly price ID until pro price is created
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || process.env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID || 'price_placeholder_pro',
   },
 }
