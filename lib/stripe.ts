@@ -23,8 +23,8 @@ export const PLANS = {
     price: 9.99,
     checks: 'unlimited',
     period: 'year',
-    // TODO: Replace with your Stripe price ID for yearly plan
-    stripePriceId: process.env.STRIPE_YEARLY_PRICE_ID || 'price_placeholder_yearly',
+    // Use NEXT_PUBLIC_ prefix to make it available to the client
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID || 'price_placeholder_yearly',
   },
   pro: {
     name: 'Pro',
@@ -32,7 +32,7 @@ export const PLANS = {
     checks: 'unlimited',
     period: 'year',
     features: ['Priority support', 'API access', 'Bulk detection'],
-    // TODO: Replace with your Stripe price ID for pro plan
-    stripePriceId: process.env.STRIPE_PRO_PRICE_ID || 'price_placeholder_pro',
+    // Use NEXT_PUBLIC_ prefix to make it available to the client
+    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID || 'price_placeholder_pro',
   },
 }
