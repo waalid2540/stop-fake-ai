@@ -3,7 +3,7 @@ import { requireAuth, checkDailyLimit, incrementDailyChecks } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth()
+    const user = await requireAuth(request)
     
     // Check daily limit for free users
     const canCheck = await checkDailyLimit(user.id)

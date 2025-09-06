@@ -6,7 +6,7 @@ import { detectLanguage, getLanguageAccuracyWarning, getMinimumTextLength } from
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireAuth()
+    const user = await requireAuth(request)
     
     // Rate limiting check
     const rateLimitResult = checkRateLimit(`text-${user.id}`, 60000, 10) // 10 requests per minute per user
