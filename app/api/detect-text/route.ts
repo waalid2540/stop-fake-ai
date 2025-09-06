@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     if (false && process.env.GPTZERO_API_KEY && process.env.GPTZERO_API_KEY !== 'placeholder-gptzero-key') {
       try {
         // Real GPTZero API call using enhanced client
-        const data = await apiClient.detectTextWithGPTZero(text, process.env.GPTZERO_API_KEY)
+        const data = await apiClient.detectTextWithGPTZero(text, process.env.GPTZERO_API_KEY!)
         
         result = {
           likelyAI: data.documents[0].completely_generated_prob > 0.5,
