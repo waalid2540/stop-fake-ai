@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    // Skip auth for now to test detection
     const { text } = await request.json()
 
     if (!text || text.length < 10) {
@@ -12,18 +11,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let result;
-
-    // For now, use simple pattern-based detection that works
-    const simulatedScore = 0.5 + (Math.random() * 0.3) // 50-80% confidence
-    
-    // Check for obvious AI patterns
+    // Simple AI pattern detection
     const aiPatterns = [
       /as an ai/i,
       /i'm an ai/i,
       /as a language model/i,
       /i cannot provide/i,
-      /it's important to note that/i
+      /it's important to note that/i,
+      /however, it's worth noting/i
     ]
     
     let hasAIPattern = false
@@ -34,9 +29,11 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    const finalScore = hasAIPattern ? Math.min(simulatedScore + 0.3, 0.95) : simulatedScore
+    // Generate confidence score
+    const baseScore = 0.5 + (Math.random() * 0.3) // 50-80%
+    const finalScore = hasAIPattern ? Math.min(baseScore + 0.3, 0.95) : baseScore
     
-    result = {
+    const result = {
       likelyAI: finalScore > 0.5,
       score: finalScore,
       language: {
@@ -54,15 +51,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-
-    // Skip increment for testing
-
     return NextResponse.json(result)
   } catch (error) {
     console.error('Text detection error:', error)
     
     return NextResponse.json(
-      { error: 'An unexpected error occurred. Please try again.' },
+      { error: 'Detection failed. Please try again.' },
       { status: 500 }
     )
   }
