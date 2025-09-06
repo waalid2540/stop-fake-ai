@@ -1,67 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth, checkDailyLimit, incrementDailyChecks } from '@/lib/auth'
-import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit'
-import { apiClient, classifyAPIError } from '@/lib/api-client'
-import { detectLanguage, getLanguageAccuracyWarning, getMinimumTextLength } from '@/lib/language-utils'
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth(request)
-    
-    // Rate limiting check
-    const rateLimitResult = checkRateLimit(`text-${user.id}`, 60000, 10) // 10 requests per minute per user
-    const rateLimitHeaders = getRateLimitHeaders(rateLimitResult)
-    
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: 'Rate limit exceeded. Please wait before making another request.',
-          resetTime: rateLimitResult.resetTime 
-        },
-        { 
-          status: 429,
-          headers: rateLimitHeaders
-        }
-      )
-    }
     
     // Check daily limit for free users
     const canCheck = await checkDailyLimit(user.id)
     if (!canCheck) {
       return NextResponse.json(
         { error: 'Daily limit reached. Please upgrade to continue.' },
-        { 
-          status: 429,
-          headers: rateLimitHeaders
-        }
+        { status: 429 }
       )
     }
 
     const { text } = await request.json()
 
-    if (!text || text.length < 50) {
+    if (!text || text.length < 10) {
       return NextResponse.json(
-        { error: 'Text must be at least 50 characters (minimum varies by language)' },
+        { error: 'Text must be at least 10 characters' },
         { status: 400 }
-      )
-    }
-    
-    // Detect language and validate minimum length
-    const detectedLanguage = detectLanguage(text)
-    const minLength = getMinimumTextLength(detectedLanguage)
-    const accuracyWarning = getLanguageAccuracyWarning(detectedLanguage)
-    
-    if (text.length < minLength) {
-      return NextResponse.json(
-        { 
-          error: `Text must be at least ${minLength} characters for ${detectedLanguage.name} language detection`,
-          detectedLanguage: detectedLanguage.name,
-          minLength
-        },
-        { 
-          status: 400,
-          headers: rateLimitHeaders
-        }
       )
     }
 
@@ -93,10 +51,10 @@ export async function POST(request: NextRequest) {
       likelyAI: finalScore > 0.5,
       score: finalScore,
       language: {
-        detected: detectedLanguage.name,
-        code: detectedLanguage.code,
-        accuracy: detectedLanguage.accuracy,
-        warning: accuracyWarning
+        detected: 'English',
+        code: 'en',
+        accuracy: 'high',
+        warning: null
       },
       details: {
         method: 'pattern',
@@ -189,20 +147,13 @@ export async function POST(request: NextRequest) {
     // Increment daily checks for free users
     await incrementDailyChecks(user.id)
 
-    return NextResponse.json(result, {
-      headers: rateLimitHeaders
-    })
+    return NextResponse.json(result)
   } catch (error) {
     console.error('Text detection error:', error)
-    const classifiedError = classifyAPIError(error)
     
     return NextResponse.json(
-      { 
-        error: classifiedError.message,
-        code: classifiedError.code,
-        retryable: classifiedError.retryable
-      },
-      { status: classifiedError.statusCode || 500 }
+      { error: 'An unexpected error occurred. Please try again.' },
+      { status: 500 }
     )
   }
 }
