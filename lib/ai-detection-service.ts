@@ -24,7 +24,7 @@ class AIDetectionService {
       const response = await fetch('https://api-inference.huggingface.co/models/roberta-base-openai-detector', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer hf_xxxxxxxxx', // Free API key
+          'Authorization': `Bearer ${process.env.HUGGINGFACE_API_KEY || 'hf_xxxxxxxxx'}`, // Free API key
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ inputs: text })
