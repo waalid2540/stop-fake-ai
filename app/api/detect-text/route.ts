@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
     })
     
     // Sentence structure analysis
-    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0)
-    const avgLength = sentences.reduce((sum, s) => sum + s.split(' ').length, 0) / sentences.length
+    const sentences = text.split(/[.!?]+/).filter((s: string) => s.trim().length > 0)
+    const avgLength = sentences.reduce((sum: number, s: string) => sum + s.split(' ').length, 0) / sentences.length
     
     // AI tends to write longer, more structured sentences
     if (avgLength > 20) aiScore += 10
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     
     // Repetitive structure (AI tends to be more repetitive)
     const words = text.split(/\s+/)
-    const uniqueWords = new Set(words.map(w => w.toLowerCase()))
+    const uniqueWords = new Set(words.map((w: string) => w.toLowerCase()))
     const repetitionRatio = words.length / uniqueWords.size
     
     if (repetitionRatio > 2) aiScore += 10
