@@ -58,35 +58,44 @@ export async function POST(request: NextRequest) {
       /\bwow\b/i
     ]
     
-    // Simple language detection
+    // Improved language detection
     const somaliWords = ['waa', 'iyo', 'oo', 'ah', 'ka', 'ku', 'la', 'si', 'uu', 'ay', 'aan', 'waxa', 'markii', 'hadii']
     const arabicPattern = /[\u0600-\u06FF]/
-    const somaliPattern = new RegExp(somaliWords.join('|'), 'i')
     
     let detectedLanguage = 'English'
+    
+    // Check for Arabic script first (most reliable)
     if (arabicPattern.test(text)) {
       detectedLanguage = 'Arabic'
-    } else if (somaliPattern.test(text)) {
-      detectedLanguage = 'Somali'
+    } else {
+      // For Somali detection, require at least 2 Somali words and calculate percentage
+      const words = text.toLowerCase().split(/\s+/)
+      const somaliMatches = words.filter((word: string) => somaliWords.includes(word)).length
+      const somaliPercentage = somaliMatches / words.length
+      
+      // Only classify as Somali if we have strong indicators (at least 15% Somali words)
+      if (somaliMatches >= 2 && somaliPercentage >= 0.15) {
+        detectedLanguage = 'Somali'
+      }
     }
     
     // Calculate scores
     let aiScore = 0
     let humanScore = 0
     
-    // Check strong AI patterns
+    // Check strong AI patterns (definitive indicators)
     strongAIPatterns.forEach(pattern => {
-      if (pattern.test(text)) aiScore += 40
+      if (pattern.test(text)) aiScore += 30
     })
     
-    // Check weak AI patterns
+    // Check weak AI patterns (common in AI text)
     weakAIPatterns.forEach(pattern => {
-      if (pattern.test(text)) aiScore += 10
+      if (pattern.test(text)) aiScore += 8
     })
     
-    // Check human patterns
+    // Check human patterns (casual/personal language)
     humanPatterns.forEach(pattern => {
-      if (pattern.test(text)) humanScore += 20
+      if (pattern.test(text)) humanScore += 15
     })
     
     // Sentence structure analysis
@@ -107,15 +116,33 @@ export async function POST(request: NextRequest) {
     
     // Calculate final confidence
     const totalScore = aiScore + humanScore
-    let finalScore = totalScore > 0 ? aiScore / totalScore : 0.3
+    let finalScore
     
-    // For non-English languages, reduce confidence
-    if (detectedLanguage !== 'English') {
-      finalScore = finalScore * 0.7 // Reduce confidence by 30%
+    if (totalScore > 0) {
+      finalScore = aiScore / totalScore
+    } else {
+      // No patterns matched - use neutral analysis
+      // Base on text characteristics
+      const hasComplexVocabulary = /\b(?:furthermore|moreover|consequently|nevertheless|accordingly|specifically|particularly)\b/i.test(text)
+      const hasPersonalPronouns = /\b(?:i|my|me|myself)\b/i.test(text)
+      const hasTypos = /\b(?:teh|recieve|seperate|definately|occured)\b/i.test(text)
+      
+      if (hasPersonalPronouns && !hasComplexVocabulary) {
+        finalScore = 0.3 // Likely human
+      } else if (hasComplexVocabulary && !hasPersonalPronouns) {
+        finalScore = 0.7 // Likely AI
+      } else {
+        finalScore = 0.5 // Neutral
+      }
     }
     
-    // Ensure score is reasonable (20-95%)
-    finalScore = Math.max(0.2, Math.min(0.95, finalScore))
+    // For non-English languages, adjust confidence
+    if (detectedLanguage !== 'English') {
+      finalScore = finalScore * 0.8 + 0.1 // Reduce confidence and add uncertainty
+    }
+    
+    // Ensure score is reasonable (15-90%)
+    finalScore = Math.max(0.15, Math.min(0.90, finalScore))
     
     result = {
       likelyAI: finalScore > 0.5,
